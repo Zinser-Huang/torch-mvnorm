@@ -1,6 +1,6 @@
 from numpy.core.numeric import full_like, zeros_like
-from scipy.stats import mvn
-from numpy import array, int32,Inf
+from scipy.stats import multivariate_normal
+from numpy import array, int32,inf
 from joblib import Parallel, delayed
 
 
@@ -16,7 +16,7 @@ integration = Integration()
 # TODO : allow more joblib control
 
 def integrate(l,u,m,c):
-    return mvn.mvnun(l, u, m, c, integration.maxpts, integration.abseps, integration.releps)
+    return multivariate_normal.cdf(lower_limit =l,x= u, mean=m, cov=c, maxpts=integration.maxpts,abseps= integration.abseps,releps= integration.releps)
 
 def parallel_integration(l,u,m,c):
     N = c.shape[0]
@@ -24,8 +24,8 @@ def parallel_integration(l,u,m,c):
         return tuple(), tuple()
     p = Parallel(n_jobs=integration.n_jobs)(
         delayed(integrate)(l[j,...], u[j,...], m[j,...], c[j,...]) for j in range(N)) 
-    v, i = zip(*p)
-    return v, i
+    # v, i = zip(*p)
+    return p
 
 
 def prod(tup):
@@ -44,16 +44,16 @@ def hyperrectangle_integration(mean,covariance,lower=None,upper=None,info=False)
 
     N = prod(batch_shape)
     m = mean.reshape(N,d)
-    l = full_like(m,-Inf) if lower is None else lower.reshape(N,d)
+    l = full_like(m,-inf) if lower is None else lower.reshape(N,d)
     u = zeros_like(m) if upper is None else upper.reshape(N,d)
     c = covariance.reshape(N,d,d)
 
 
-    v, i = parallel_integration(l,u,m,c)
+    v = parallel_integration(l,u,m,c)
     values = array(v).reshape(batch_shape)
-    if info :
-        infos  = array(i, dtype = int32).reshape(batch_shape)
-        return (values,infos)
-    else:
-        return values
+    # if info :
+    #     infos  = array(i, dtype = int32).reshape(batch_shape)
+    #     return (values,infos)
+    # else:
+    return values
 
